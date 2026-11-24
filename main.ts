@@ -1,3 +1,16 @@
+// Entry summary (what this file does, and only this):
+//   1. Validates VIDEO.json at the repository root: it must exist,
+//      parse as JSON, and be an object whose "url" is a string; a
+//      non-empty url must match https://www.tiktok.com/@<handle>/video/<id>.
+//   2. Validates CAPTION.txt: it must exist and hold at least two
+//      non-empty lines (the caption line and the play code line).
+//   3. Copies VIDEO.json, byte for byte, into the output directory
+//      (MAKEFUN_OUTPUT_DIR, or /output when unset) and prints a short
+//      report: the url, the caption's first line, the play code, the
+//      byte count and the sha256 of VIDEO.json.
+//   It never touches the video file itself; the house reads the video
+//   from the TikTok address VIDEO.json names.
+//
 // main.ts — entrypoint for the "Day one, day seven" entry.
 // It validates the two submission files at the repository root —
 // VIDEO.json (the TikTok address of the posted video) and CAPTION.txt
