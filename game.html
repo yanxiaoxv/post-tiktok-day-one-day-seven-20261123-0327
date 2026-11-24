@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PULSE POD — day seven build</title>
+<style>
+  body { margin: 0; background: #0a0824; display: flex; flex-direction: column;
+         align-items: center; font-family: system-ui, sans-serif; color: #fff; }
+  h1 { font-size: 18px; margin: 12px 0 4px; letter-spacing: 3px; }
+  p { font-size: 13px; color: #a9b6ff; margin: 0 0 10px; }
+  canvas { width: min(92vw, 405px); aspect-ratio: 9/16; background: #0a0824;
+           border: 1px solid #2a2560; border-radius: 8px; touch-action: none; }
+</style>
+</head>
+<body>
+<h1>PULSE POD</h1>
+<p>Day-seven build — arrows / A D / drag to fly. Dodge the wreckage, grab the orbs.</p>
+<canvas id="game" width="540" height="960"></canvas>
+<script type="module">
+import { W, H, FPS, createWorld, step } from "./game.js";
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const world = createWorld(20261123, 7);
+let targetX = W / 2;
+const keys = {};
+
+addEventListener("keydown", (e) => { keys[e.key] = true; });
+addEventListener("keyup", (e) => { keys[e.key] = false; });
+function pointerToX(e) {
+  const r = canvas.getBoundingClientRect();
+  return ((e.clientX - r.left) / r.width) * W;
+}
+canvas.addEventListener("pointerdown", (e) => { targetX = pointerToX(e); });
+canvas.addEventListener("pointermove", (e) => {
+  if (e.buttons) targetX = pointerToX(e);
+});
+
+function drawDebris(d) {
+  ctx.beginPath();
+  for (let k = 0; k < 7; k++) {
+    const ang = d.angle + (k * Math.PI * 2) / 7;
+    const rad = d.r * d.verts[k];
+    const px = d.x + Math.cos(ang) * rad;
+    const py = d.y + Math.sin(ang) * rad;
+    if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#9794ab";
+  ctx.fill();
+}
+
+function draw() {
+  // Background.
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "#0a0824");
+  grad.addColorStop(1, "#141a42");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // Backdrop stars.
+  for (const s of world.backdrop) {
+    ctx.fillStyle = s.layer === 0 ? "#8b96d8" : "#cfd8ff";
+    const sz = s.layer === 0 ? 2 : 3;
+    ctx.fillRect(s.x, s.y, sz, sz);
+  }
+  // Pickups.
+  for (const p of world.pickups) {
+    if (p.kind === "orb") {
+      ctx.fillStyle = "#ffc442";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = "#78e6ff";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  // Debris.
+  for (const d of world.debris) drawDebris(d);
+  // Particles.
+  for (const m of world.motes) {
+    ctx.fillStyle = `rgb(${m.color[0]},${m.color[1]},${m.color[2]})`;
+    ctx.fillRect(m.x - 1, m.y - 1, m.size, m.size);
+  }
+  // Pod: a capsule with a canopy dot.
+  const pod = world.pod;
+  ctx.fillStyle = "#40dcff";
+  ctx.beginPath();
+  ctx.ellipse(pod.x, pod.y, 15, 21, pod.tilt, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ebfcff";
+  ctx.beginPath();
+  ctx.arc(pod.x, pod.y - 5, 6, 0, Math.PI * 2);
+  ctx.fill();
+  if (world.magnet > 0) {
+    ctx.strokeStyle = "#78e6ff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(pod.x, pod.y, 36, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // HUD.
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 26px system-ui, sans-serif";
+  ctx.fillText(`SCORE ${String(world.score).padStart(4, "0")}`, 22, 50);
+  ctx.fillStyle = "#ffc442";
+  ctx.fillText(`ORBS ${world.orbsGot}`, 22, 84);
+  if (world.combo > 1) ctx.fillText(`COMBO X${world.combo}`, W - 190, 50);
+  if (world.magnet > 0) {
+    ctx.fillStyle = "#78e6ff";
+    ctx.fillText("MAGNET", 22, 118);
+  }
+}
+
+function tick() {
+  if (keys.ArrowLeft || keys.a || keys.A) targetX -= 14;
+  if (keys.ArrowRight || keys.d || keys.D) targetX += 14;
+  targetX = Math.max(28, Math.min(W - 28, targetX));
+  step(world, { tx: targetX });
+  draw();
+  setTimeout(() => requestAnimationFrame(tick), 1000 / FPS);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
